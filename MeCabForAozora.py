@@ -12,44 +12,49 @@ import MeCab
 
 
 def get_work_info(work_url, target_pattern):
-    response = requests.get(work_url)
-    get_info = []
-    soup = BeautifulSoup(response.content, 'html.parser')
-    # 作品名取得
-    body_font = soup.find_all('font')
-    match = re.search(target_pattern[0], str(body_font))
-    if match:
-        matched = match.group()
-        matched = re.sub(">", "", matched)
-        matched = re.sub("</", "", matched)
-        get_info.append(matched)
-    else:
-        get_info.append(None)
-    # 作者名取得
-    match = re.search(target_pattern[1], str(body_font))
-    if match:
-        match = match.group()
-        match = re.sub('l">', "", match)
-        match = re.sub("</a>", "", match)
-        get_info.append(match)
-    else:
-        get_info.append(None)
-    # ZIPファイル名を取得
-    body_a = soup.find_all('a')
-    match = re.search(target_pattern[2], str(body_a))
-    if match:
-        get_info.append(match.group())
-    else:
-        match = re.search(target_pattern[3], str(body_a))
+    try:
+        response = requests.get(work_url)
+        get_info = []
+        soup = BeautifulSoup(response.content, 'html.parser')
+        # 作品名取得
+        body_font = soup.find_all('font')
+        match = re.search(target_pattern[0], str(body_font))
+        if match:
+            matched = match.group()
+            matched = re.sub(">", "", matched)
+            matched = re.sub("</", "", matched)
+            get_info.append(matched)
+        else:
+            get_info.append(None)
+        # 作者名取得
+        match = re.search(target_pattern[1], str(body_font))
+        if match:
+            match = match.group()
+            match = re.sub('l">', "", match)
+            match = re.sub("</a>", "", match)
+            get_info.append(match)
+        else:
+            get_info.append(None)
+        # ZIPファイル名を取得
+        body_a = soup.find_all('a')
+        match = re.search(target_pattern[2], str(body_a))
         if match:
             get_info.append(match.group())
         else:
-            get_info.append(None)
-    # ダウンロードURL取得
-    match = re.sub(r'(card)[0-9]*(\.html)', "files/", work_url)
-    match += get_info[2]
-    get_info.append(match)
-    return get_info
+            match = re.search(target_pattern[3], str(body_a))
+            if match:
+                get_info.append(match.group())
+            else:
+                get_info.append(None)
+        # ダウンロードURL取得
+        match = re.sub(r'(card)[0-9]*(\.html)', "files/", work_url)
+        match += get_info[2]
+        get_info.append(match)
+        return get_info
+    except Exception:
+        print("失敗\n")
+        print("警告: URLが正しくありません。処理を中断します。")
+        sys.exit()
 
 
 def downloadFile(url: str, target_dir='./') -> Union[str, bool]:
@@ -120,18 +125,46 @@ def txtConverter(filenames, text):
         s = ""
         with open(file_w, mode="w", encoding="utf-8") as f:
             for text in text_splitted:
-                s += " ".join(text) + " 。" + "\n"
-            f.write(s)
-            print("変換処理が完了しました。")
-            print("出力ファイルパス: {}".format(file_w))
-            print("変換後の行数: %d" % (len(s.split("\n"))))
-            print("単語種類数/全単語数: %d/%d" % (len(set(s.split())), len(s.split())))
-            # print("1行あたりの平均単語数: %.1f" % (len(s.split())/len(set(s.split()))))
+                s += " ".join(text) + " 。 " + "\n"
+            f.write(s[0:-1])
+    
+        print("変換処理が完了しました。")
+        print("出力ファイルパス: \{}".format(file_w))
+        print("変換後の行数: %d" % (len(s.split("\n"))-1))
+        print("単語種類数/全単語数: %d/%d" % (len(set(s.split())), len(s.split())))
+        # print("1行あたりの平均単語数: %.1f" % (len(s.split())/len(set(s.split()))))
+        return file_w
+            
     except Exception as e:
         print("変換処理に失敗しました。")
         print("警告: テキストファイルの解析ができません。")
         print("エラー内容: {}\n".format(e))
-        return
+        file_w = None
+        return file_w
+
+
+def yn_input(judge):
+    if judge in ['y', 'ye', 'yes']:
+        return True
+
+
+def merge_files(dir_name, s_filepath):
+    str_yn = input("\n変換したファイルをマージしますか(y/n)?: ").lower()
+    if yn_input(str_yn):
+        m_text = ""
+        for i in range(len(s_filepath)):
+            with open(s_filepath[i], mode="r", encoding='utf-8') as f:
+                text = f.read()
+            if i != len(s_filepath):
+                m_text += text + '\n'
+            else:
+                m_text += text
+        with open('./' + dir_name + '/merged.txt', mode='w', encoding='utf-8') as f:
+            f.write(m_text)
+        print("{}ファイルを新規ファイルとしてマージしました。".format(len(s_filepath)))
+        print("出力ファイルパス: \{}\merged.txt".format(dir_name))
+        print("マージ後の行数: %d" % (len(m_text.split("\n"))-1))
+
 
 
 def dir_isfile(dir_name):
@@ -140,25 +173,23 @@ def dir_isfile(dir_name):
                    for name in os.listdir('./' + dir_name))
     print("注意: \{} ディレクトリ内に{}ファイル存在します。\n".format(dir_name, file_num))
     print(*file_name, sep='\n')
-    str_yn = input("\n続行するには全て削除する必要があります。削除しますか(y/N)?: ").lower()
-    if str_yn in ['y', 'ye', 'yes']:
+    str_yn = input("\n続行するには全て削除する必要があります。削除しますか(y/n)?: ").lower()
+    if yn_input(str_yn):
         for filename in os.listdir('./' + dir_name):
             file_path = os.path.join('./' + dir_name, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
         print("{}ファイルを削除しました。\n".format(file_num))
-        return
     else:
         raise KeyboardInterrupt
 
 
 def dir_isdir(dir_name):
     print("警告: \{} が存在しません。".format(dir_name))
-    str_yn = input("続行するには {} ディレクトリを作成する必要があります。新規作成しますか(y/N)?: ".format(dir_name)).lower()
-    if str_yn in ['y', 'ye', 'yes']:
+    str_yn = input("続行するには {} ディレクトリを作成する必要があります。新規作成しますか(y/n)?: ".format(dir_name)).lower()
+    if yn_input(str_yn):
         os.mkdir('./' + dir_name)
         print("{} ディレクトリを作成しました。\n".format(dir_name))
-        return
     else:
         raise KeyboardInterrupt
 
@@ -169,6 +200,7 @@ def main():
     filenames = []
     URL = []
     info = []
+    split_path = []
     i = 1
     j = 0
     target_pattern = [r'(>).*(/)',
@@ -187,7 +219,7 @@ def main():
             dir_isfile(dir_name)
 
         print("青空文庫の書籍URLを入力してください。'e'で変換処理を開始します。")
-        print("入力形式について不明な場合は'help'を入力してください。")
+        print("入力形式について不明な場合は'help'を入力してください。\n")
         while True:
             URL_str = input('URL[{}]: '.format(i))
             if URL_str == 'e':
@@ -204,15 +236,15 @@ def main():
                 continue
             else:
                 if not re.search("www.aozora.gr.jp", URL_str):
-                    print("警告: 入力したURLが不正です。\n")
+                    print("警告: 入力したURLが不正です。やり直してください。\n")
                     continue
                 print("データ取得中... ", end="")
                 info = get_work_info(URL_str, target_pattern)
-                print("完了")
+                print("成功")
                 print("作品名: {}".format(info[0]))
                 print("著者名: {}".format(info[1]))
-                print("テキストファイル: {}".format(info[2]))
-                print("Download URL: {}".format(info[3]))
+                print("テキストファイル(.zip): {}".format(info[2]))
+                print("ダウンロードURL: {}".format(info[3]))
                 if URL_str not in URL:
                     URL.append(URL_str)
                     zip_file.append(downloadFile(
@@ -228,10 +260,13 @@ def main():
             if URL[j] == 'e':
                 break
             print("\n")
-            print("{}/{} ファイル目の処理を開始します...".format(j+1, len(URL)))
-            print("対象ファイルパス: {}".format(filenames[j]))
+            print("[{}/{}] ファイルの処理を開始します...".format(j+1, len(URL)))
+            print("対象ファイルパス: \{}".format(filenames[j]))
             text = readSjis(filenames[j])
-            txtConverter(filenames[j], text)
+            split_path.append(txtConverter(filenames[j], text))
+            
+        if len(URL) > 1:
+            merge_files(dir_name, split_path)
 
     except Exception as e:
         print("\n警告: 例外処理を検出したため終了します。")
