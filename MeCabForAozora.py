@@ -93,7 +93,7 @@ def txtConverter(filenames, text):
     try:
         text = re.split(r"\-{5,}", text)[2]  # ハイフンより上を削除
         text = re.split(r"底本：", text)[0]  # 「底本：」より下を削除
-        text = re.sub(r"［＃８字下げ.*?中見出し］", "", text)  # 中見出しを削除
+        text = re.sub(r"［＃[０-９]+字下げ.*?中見出し］", "", text)  # 中見出しを削除
         text = re.sub("※", "", text)  # 「※」を削除
         text = re.sub(r"《.*?》", "", text)  # 《...》を削除
         text = re.sub(r"［.*?］", "", text)  # ［...］を削除
@@ -155,7 +155,7 @@ def merge_files(dir_name, s_filepath):
         for i in range(len(s_filepath)):
             with open(s_filepath[i], mode="r", encoding='utf-8') as f:
                 text = f.read()
-            if i != len(s_filepath):
+            if i != len(s_filepath)-1:
                 m_text += text + '\n'
             else:
                 m_text += text
@@ -163,7 +163,7 @@ def merge_files(dir_name, s_filepath):
             f.write(m_text)
         print("{}ファイルを新規ファイルとしてマージしました。".format(len(s_filepath)))
         print("出力ファイルパス: \{}\merged.txt".format(dir_name))
-        print("マージ後の行数: %d" % (len(m_text.split("\n"))-1))
+        print("マージ後の行数: %d" % (len(m_text.split("\n"))))
 
 
 
