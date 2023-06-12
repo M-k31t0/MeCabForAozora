@@ -9,6 +9,7 @@ import subprocess
 from bs4 import BeautifulSoup
 from typing import Union
 import MeCab
+import neologdn
 
 
 def get_work_info(work_url, target_pattern):
@@ -103,6 +104,8 @@ def txtConverter(filenames, text):
         text = re.sub("　　[一二三四五六七八九十]+", "", text)  # 漢数字を削除
         text = re.sub(r"\u3000", "", text)  # 全角スペースを削除
         text = re.sub(r"。", "<period>", text)  # 句点を<period>に
+        # neologdnによる処理
+        text = neologdn.normalize(text)
         # 「」内の<period>を句点に置換
         pattern = re.compile("「.*?」")
         match_sents = pattern.findall(text)
@@ -113,6 +116,7 @@ def txtConverter(filenames, text):
         text_splitted = text.split("<period>")
         # 空要素を取り除く
         text_splitted = list(filter(None, text_splitted))
+
         # １文ずつ形態素解析
         # mecab = MeCab.Tagger("-Owakati")
         mecab = MeCab.Tagger(
@@ -127,14 +131,14 @@ def txtConverter(filenames, text):
             for text in text_splitted:
                 s += " ".join(text) + " 。 " + "\n"
             f.write(s[0:-1])
-    
+
         print("変換処理が完了しました。")
         print("出力ファイルパス: \{}".format(file_w))
         print("変換後の行数: %d" % (len(s.split("\n"))-1))
         print("単語種類数/全単語数: %d/%d" % (len(set(s.split())), len(s.split())))
         # print("1行あたりの平均単語数: %.1f" % (len(s.split())/len(set(s.split()))))
         return file_w
-            
+
     except Exception as e:
         print("変換処理に失敗しました。")
         print("警告: テキストファイルの解析ができません。")
@@ -166,7 +170,6 @@ def merge_files(dir_name, s_filepath):
         print("マージ後の行数: %d" % (len(m_text.split("\n"))))
 
 
-
 def dir_isfile(dir_name):
     file_name = os.listdir('./' + dir_name)
     file_num = sum(os.path.isfile(os.path.join('./' + dir_name, name))
@@ -186,7 +189,8 @@ def dir_isfile(dir_name):
 
 def dir_isdir(dir_name):
     print("警告: \{} が存在しません。".format(dir_name))
-    str_yn = input("続行するには {} ディレクトリを作成する必要があります。新規作成しますか(y/n)?: ".format(dir_name)).lower()
+    str_yn = input(
+        "続行するには {} ディレクトリを作成する必要があります。新規作成しますか(y/n)?: ".format(dir_name)).lower()
     if yn_input(str_yn):
         os.mkdir('./' + dir_name)
         print("{} ディレクトリを作成しました。\n".format(dir_name))
@@ -264,7 +268,7 @@ def main():
             print("対象ファイルパス: \{}".format(filenames[j]))
             text = readSjis(filenames[j])
             split_path.append(txtConverter(filenames[j], text))
-            
+
         if len(URL) > 1:
             merge_files(dir_name, split_path)
 
