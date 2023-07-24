@@ -84,7 +84,7 @@ def unzip(filename: str, target_dir='./') -> list:
 
 
 def readSjis(path: str) -> str:
-    with open(path, mode="r", encoding='shift-JIS') as f:
+    with open(path, mode="r", encoding='shift_jis') as f:
         text = f.read()
     return text
 
