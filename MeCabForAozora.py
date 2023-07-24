@@ -84,7 +84,7 @@ def unzip(filename: str, target_dir='./') -> list:
 
 
 def readSjis(path: str) -> str:
-    with open(path, mode="r", encoding='shift_jis') as f:
+    with open(path, mode="r", encoding='shift-JIS') as f:
         text = f.read()
     return text
 
@@ -135,7 +135,7 @@ def txtConverter(filenames, text):
         print("変換処理が完了しました。")
         print("出力ファイルパス: \{}".format(file_w))
         print("変換後の行数: %d" % (len(s.split("\n"))-1))
-        print("単語種類数/全単語数: %d/%d" % (len(set(s.split())), len(s.split())))
+        print("語彙数: %d" % count_vocab(s))
         # print("1行あたりの平均単語数: %.1f" % (len(s.split())/len(set(s.split()))))
         return file_w
 
@@ -168,6 +168,13 @@ def merge_files(dir_name, s_filepath):
         print("{}ファイルを新規ファイルとしてマージしました。".format(len(s_filepath)))
         print("出力ファイルパス: \{}\merged.txt".format(dir_name))
         print("マージ後の行数: %d" % (len(m_text.split("\n"))))
+        print("マージ後の語彙数: %d" % count_vocab(m_text))
+
+
+def count_vocab(text):
+    words = text.split()  # 入力された文章を空白で分割して単語のリストを作成
+    unique_words = set(words)  # 重複を排除した語彙の集合を作成
+    return len(unique_words)  # 語彙数を返す
 
 
 def dir_isfile(dir_name):
