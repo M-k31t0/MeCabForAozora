@@ -5,6 +5,7 @@ import zipfile
 import requests
 import os.path
 import glob
+import numpy as np
 import subprocess
 from bs4 import BeautifulSoup
 from typing import Union
@@ -127,17 +128,27 @@ def txtConverter(filenames, text):
         filenames = re.sub(".txt", "", filenames)
         file_w = filenames + "_splitted.txt"
         s = ""
+        s_cnt = 0
+        s_list = []
         with open(file_w, mode="w", encoding="utf-8") as f:
             for text in text_splitted:
+                if len(text) > 30:
+                    continue
                 s += " ".join(text) + " 。 " + "\n"
+                s_cnt = s_cnt + len(text)
+                s_list.append(s)
             f.write(s[0:-1])
 
         print("変換処理が完了しました。")
         print("出力ファイルパス: \{}".format(file_w))
         print("変換後の行数: %d" % (len(s.split("\n"))-1))
         print("語彙数: %d" % count_vocab(s))
-        # print("1行あたりの平均単語数: %.1f" % (len(s.split())/len(set(s.split()))))
-        return file_w
+        print("1行あたりの平均単語数: %.1f" % (s_cnt / (len(s.split("\n"))-1)))
+        print("std: %.1f" % (np.std(s_list)))
+        word_counts = len(s.split())
+        row_counts = len(s.split("\n"))-1
+        
+        return file_w, word_counts, row_counts, s_list
 
     except Exception as e:
         print("変換処理に失敗しました。")
@@ -152,7 +163,7 @@ def yn_input(judge):
         return True
 
 
-def merge_files(dir_name, s_filepath):
+def merge_files(dir_name, s_filepath, s_ave, txt_cnt):
     str_yn = input("\n変換したファイルをマージしますか(y/n)?: ").lower()
     if yn_input(str_yn):
         m_text = ""
@@ -169,6 +180,8 @@ def merge_files(dir_name, s_filepath):
         print("出力ファイルパス: \{}\merged.txt".format(dir_name))
         print("マージ後の行数: %d" % (len(m_text.split("\n"))))
         print("マージ後の語彙数: %d" % count_vocab(m_text))
+        print("マージ後の1行あたりの平均単語数: %.1f" % s_ave)
+        print("std: %.1f" % np.std(txt_cnt))
 
 
 def count_vocab(text):
@@ -212,6 +225,8 @@ def main():
     URL = []
     info = []
     split_path = []
+    s_counts = []
+    sentences = []
     i = 1
     j = 0
     target_pattern = [r'(>).*(/)',
@@ -274,10 +289,15 @@ def main():
             print("[{}/{}] ファイルの処理を開始します...".format(j+1, len(URL)))
             print("対象ファイルパス: \{}".format(filenames[j]))
             text = readSjis(filenames[j])
-            split_path.append(txtConverter(filenames[j], text))
+            text_s, w, r, sentences = txtConverter(filenames[j], text)
+            split_path.append(text_s)
+            w_counts += w
+            r_counts += r
+            s_counts += sentences
 
         if len(URL) > 1:
-            merge_files(dir_name, split_path)
+            ave = float(w_counts) / r_counts
+            merge_files(dir_name, split_path, ave, s_counts)
 
     except Exception as e:
         print("\n警告: 例外処理を検出したため終了します。")
