@@ -142,11 +142,12 @@ def txtConverter(filenames, text, limit):
     print("出力ファイルパス: \{}".format(file_w))
     print("変換後の行数: %d" % (len(s.split("\n"))-1))
     print("語彙数: %d" % count_vocab(s))
-    print("1行あたりの平均単語数: %.1f" % (s_cnt / (len(s.split("\n"))-1)))
-    print("std: %.1f" % (np.std(s_list)))
+    print("1行あたりの平均単語数: %.2f" % (s_cnt / (len(s.split("\n"))-1)))
+    print("std: %.2f" % (np.std(s_list)))
     row_counts = len(s.split("\n"))-1
 
     return file_w, s_cnt, row_counts, s_list
+
 
 
 def yn_input(judge):
@@ -171,8 +172,8 @@ def merge_files(dir_name, s_filepath, s_ave, txt_cnt):
         print("出力ファイルパス: \{}\merged.txt".format(dir_name))
         print("マージ後の行数: %d" % (len(m_text.split("\n"))))
         print("マージ後の語彙数: %d" % count_vocab(m_text))
-        print("マージ後の1行あたりの平均単語数: %.1f" % s_ave)
-        print("std: %.1f" % np.std(txt_cnt))
+        print("マージ後の1行あたりの平均単語数: %.2f" % s_ave)
+        print("std: %.2f" % np.std(txt_cnt))
 
 
 def count_vocab(text):
@@ -236,7 +237,7 @@ def main():
         dir_isdir(dir_name)
     if len(os.listdir('./' + dir_name)) > 0:
         dir_isfile(dir_name)
-
+        
     print("\n")
     lim_size = int(input('1行あたりの単語サイズの上限値を入力(無制限にする場合は0を入力): '))
     if lim_size == 0:
@@ -281,9 +282,12 @@ def main():
             else:
                 print('警告: {} はすでにダウンロードされています。\n'.format(info[2]))
 
+
+    
     for j in range(len(URL)):
         if URL[j] == 'e':
             break
+        print("\n")
         print("[{}/{}] ファイルの処理を開始します...".format(j+1, len(URL)))
         print("対象ファイルパス: \{}".format(filenames[j]))
         text = readSjis(filenames[j])
@@ -297,7 +301,9 @@ def main():
         ave = float(w_counts) / r_counts
         merge_files(dir_name, split_path, ave, s_counts)
 
+        
 
 if __name__ == "__main__":
     main()
     print("\nプログラムは正常に終了しました。")
+    os.system('PAUSE')
