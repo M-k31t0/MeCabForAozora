@@ -90,72 +90,63 @@ def readSjis(path: str) -> str:
     return text
 
 
-def txtConverter(filenames, text):
+def txtConverter(filenames, text, limit):
     # 前処理
-    try:
-        text = re.split(r"\-{5,}", text)[2]  # ハイフンより上を削除
-        text = re.split(r"底本：", text)[0]  # 「底本：」より下を削除
-        text = re.sub(r"［＃[０-９]+字下げ.*?中見出し］", "", text)  # 中見出しを削除
-        text = re.sub("※", "", text)  # 「※」を削除
-        text = re.sub(r"《.*?》", "", text)  # 《...》を削除
-        text = re.sub(r"［.*?］", "", text)  # ［...］を削除
-        text = re.sub(r"（.*?）", "", text)  # （...）を削除
-        text = re.sub(r"｜", "", text)  # 「｜」を削除
-        text = re.sub("\n", "", text)  # 改行を削除
-        text = re.sub("　　[一二三四五六七八九十]+", "", text)  # 漢数字を削除
-        text = re.sub(r"\u3000", "", text)  # 全角スペースを削除
-        text = re.sub(r"。", "<period>", text)  # 句点を<period>に
-        # neologdnによる処理
-        text = neologdn.normalize(text)
-        # 「」内の<period>を句点に置換
-        pattern = re.compile("「.*?」")
-        match_sents = pattern.findall(text)
-        for i, m_sent in enumerate(match_sents):
-            new_sent = m_sent.replace("<period>", "。")
-            text = text.replace(m_sent, new_sent)
-        # <period>で分割
-        text_splitted = text.split("<period>")
-        # 空要素を取り除く
-        text_splitted = list(filter(None, text_splitted))
+    text = re.split(r"\-{5,}", text)[2]  # ハイフンより上を削除
+    text = re.split(r"底本：", text)[0]  # 「底本：」より下を削除
+    text = re.sub(r"［＃[０-９]+字下げ.*?中見出し］", "", text)  # 中見出しを削除
+    text = re.sub("※", "", text)  # 「※」を削除
+    text = re.sub(r"《.*?》", "", text)  # 《...》を削除
+    text = re.sub(r"［.*?］", "", text)  # ［...］を削除
+    text = re.sub(r"（.*?）", "", text)  # （...）を削除
+    text = re.sub(r"｜", "", text)  # 「｜」を削除
+    text = re.sub("\n", "", text)  # 改行を削除
+    text = re.sub("　　[一二三四五六七八九十]+", "", text)  # 漢数字を削除
+    text = re.sub(r"\u3000", "", text)  # 全角スペースを削除
+    text = re.sub(r"。", "<period>", text)  # 句点を<period>に
+    # neologdnによる処理
+    text = neologdn.normalize(text)
+    # 「」内の<period>を句点に置換
+    pattern = re.compile("「.*?」")
+    match_sents = pattern.findall(text)
+    for i, m_sent in enumerate(match_sents):
+        new_sent = m_sent.replace("<period>", "。")
+        text = text.replace(m_sent, new_sent)
+    # <period>で分割
+    text_splitted = text.split("<period>")
+    # 空要素を取り除く
+    text_splitted = list(filter(None, text_splitted))
 
-        # １文ずつ形態素解析
-        # mecab = MeCab.Tagger("-Owakati")
-        mecab = MeCab.Tagger(
-            r'-Owakati -r "MeCab\\etc\\mecabrc" -d "MeCab\\dic\\ipadic" -u "MeCab\\dic\\NEologd\\NEologd.20200910-u.dic"')
-        for i in range(len(text_splitted)):
-            text_splitted[i] = mecab.parse(text_splitted[i]).split()
-        # テキストファイルに書き込む
-        filenames = re.sub(".txt", "", filenames)
-        file_w = filenames + "_splitted.txt"
-        s = ""
-        s_cnt = 0
-        s_list = []
-        with open(file_w, mode="w", encoding="utf-8") as f:
-            for text in text_splitted:
-                if len(text) > 30:
-                    continue
-                s += " ".join(text) + " 。 " + "\n"
-                s_cnt = s_cnt + len(text)
-                s_list.append(s)
-            f.write(s[0:-1])
+    # １文ずつ形態素解析
+    # mecab = MeCab.Tagger("-Owakati")
+    mecab = MeCab.Tagger(
+        r'-Owakati -r "MeCab\\etc\\mecabrc" -d "MeCab\\dic\\ipadic" -u "MeCab\\dic\\NEologd\\NEologd.20200910-u.dic"')
+    for i in range(len(text_splitted)):
+        text_splitted[i] = mecab.parse(text_splitted[i]).split()
+    # テキストファイルに書き込む
+    filenames = re.sub(".txt", "", filenames)
+    file_w = filenames + "_splitted.txt"
+    s = ""
+    s_cnt = 0
+    s_list = []
+    with open(file_w, mode="w", encoding="utf-8") as f:
+        for text in text_splitted:
+            if len(text) > limit + 1:
+                continue
+            s += " ".join(text) + " 。 " + "\n"
+            s_cnt = s_cnt + len(text)
+            s_list.append(len(text))
+        f.write(s[0:-1])
 
-        print("変換処理が完了しました。")
-        print("出力ファイルパス: \{}".format(file_w))
-        print("変換後の行数: %d" % (len(s.split("\n"))-1))
-        print("語彙数: %d" % count_vocab(s))
-        print("1行あたりの平均単語数: %.1f" % (s_cnt / (len(s.split("\n"))-1)))
-        print("std: %.1f" % (np.std(s_list)))
-        word_counts = len(s.split())
-        row_counts = len(s.split("\n"))-1
-        
-        return file_w, word_counts, row_counts, s_list
+    print("変換処理が完了しました。")
+    print("出力ファイルパス: \{}".format(file_w))
+    print("変換後の行数: %d" % (len(s.split("\n"))-1))
+    print("語彙数: %d" % count_vocab(s))
+    print("1行あたりの平均単語数: %.1f" % (s_cnt / (len(s.split("\n"))-1)))
+    print("std: %.1f" % (np.std(s_list)))
+    row_counts = len(s.split("\n"))-1
 
-    except Exception as e:
-        print("変換処理に失敗しました。")
-        print("警告: テキストファイルの解析ができません。")
-        print("エラー内容: {}\n".format(e))
-        file_w = None
-        return file_w
+    return file_w, s_cnt, row_counts, s_list
 
 
 def yn_input(judge):
@@ -225,6 +216,8 @@ def main():
     URL = []
     info = []
     split_path = []
+    w_counts = 0
+    r_counts = 0
     s_counts = []
     sentences = []
     i = 1
@@ -233,86 +226,78 @@ def main():
                       r'(l">).*(</a>)',
                       r'[0-9]*_ruby_[0-9]*(\.zip)',
                       r'[0-9]*_txt_[0-9]*(\.zip)']
-    try:
-        print("================================================================================")
-        print('Python MeCab for 青空文庫 (MeCabForAozora.exe)'.center(80))
-        print("Powered by mecab-ipadic-NEologd".center(80))
-        print("================================================================================")
 
-        if not os.path.isdir('./' + dir_name):
-            dir_isdir(dir_name)
-        if len(os.listdir('./' + dir_name)) > 0:
-            dir_isfile(dir_name)
+    print("================================================================================")
+    print('Python MeCab for 青空文庫 (MeCabForAozora.exe)'.center(80))
+    print("Powered by mecab-ipadic-NEologd".center(80))
+    print("================================================================================")
 
-        print("青空文庫の書籍URLを入力してください。'e'で変換処理を開始します。")
-        print("入力形式について不明な場合は'help'を入力してください。\n")
-        while True:
-            URL_str = input('URL[{}]: '.format(i))
-            if URL_str == 'e':
-                break
-            if URL_str == 'help':
-                print(
-                    "--------------------------------------------------------------------------------")
-                print("青空文庫(https://www.aozora.gr.jp)にアクセスし、書籍ページのURLをコピーします。")
-                print("例) 夏目漱石の「こころ」を入力する場合: ")
-                print("https://www.aozora.gr.jp/cards/000148/card773.html\n")
-                print("注意: 必ず.zip形式のファイルが存在するページURLを入力してください。")
-                print(
-                    "--------------------------------------------------------------------------------\n")
+    if not os.path.isdir('./' + dir_name):
+        dir_isdir(dir_name)
+    if len(os.listdir('./' + dir_name)) > 0:
+        dir_isfile(dir_name)
+
+    print("\n")
+    lim_size = int(input('1行あたりの単語サイズの上限値を入力(無制限にする場合は0を入力): '))
+    if lim_size == 0:
+        lim_size = 1000
+    print("\n")
+
+    print("青空文庫の書籍URLを入力してください。'e'で変換処理を開始します。")
+    print("入力形式について不明な場合は'help'を入力してください。\n")
+    while True:
+        URL_str = input('URL[{}]: '.format(i))
+        if URL_str == 'e':
+            break
+        if URL_str == 'help':
+            print(
+                "--------------------------------------------------------------------------------")
+            print("青空文庫(https://www.aozora.gr.jp)にアクセスし、書籍ページのURLをコピーします。")
+            print("例) 夏目漱石の「こころ」を入力する場合: ")
+            print("https://www.aozora.gr.jp/cards/000148/card773.html\n")
+            print("注意: 必ず.zip形式のファイルが存在するページURLを入力してください。")
+            print(
+                "--------------------------------------------------------------------------------\n")
+            continue
+        else:
+            if not re.search("www.aozora.gr.jp", URL_str):
+                print("警告: 入力したURLが不正です。やり直してください。\n")
                 continue
+            print("データ取得中... ", end="")
+            info = get_work_info(URL_str, target_pattern)
+            print("成功")
+            print("作品名: {}".format(info[0]))
+            print("著者名: {}".format(info[1]))
+            print("テキストファイル(.zip): {}".format(info[2]))
+            print("ダウンロードURL: {}".format(info[3]))
+            if URL_str not in URL:
+                URL.append(URL_str)
+                zip_file.append(downloadFile(
+                    info[3], './' + dir_name + '/'))
+                print('{} をダウンロードしました。'.format(info[2]))
+                filenames = unzip(zip_file[i-1], './' + dir_name)
+                print('{} を解凍しました。\n'.format(info[2]))
+                i += 1
             else:
-                if not re.search("www.aozora.gr.jp", URL_str):
-                    print("警告: 入力したURLが不正です。やり直してください。\n")
-                    continue
-                print("データ取得中... ", end="")
-                info = get_work_info(URL_str, target_pattern)
-                print("成功")
-                print("作品名: {}".format(info[0]))
-                print("著者名: {}".format(info[1]))
-                print("テキストファイル(.zip): {}".format(info[2]))
-                print("ダウンロードURL: {}".format(info[3]))
-                if URL_str not in URL:
-                    URL.append(URL_str)
-                    zip_file.append(downloadFile(
-                        info[3], './' + dir_name + '/'))
-                    print('{} をダウンロードしました。'.format(info[2]))
-                    filenames = unzip(zip_file[i-1], './' + dir_name)
-                    print('{} を解凍しました。\n'.format(info[2]))
-                    i += 1
-                else:
-                    print('警告: {} はすでにダウンロードされています。\n'.format(info[2]))
+                print('警告: {} はすでにダウンロードされています。\n'.format(info[2]))
 
-        for j in range(len(URL)):
-            if URL[j] == 'e':
-                break
-            print("\n")
-            print("[{}/{}] ファイルの処理を開始します...".format(j+1, len(URL)))
-            print("対象ファイルパス: \{}".format(filenames[j]))
-            text = readSjis(filenames[j])
-            text_s, w, r, sentences = txtConverter(filenames[j], text)
-            split_path.append(text_s)
-            w_counts += w
-            r_counts += r
-            s_counts += sentences
+    for j in range(len(URL)):
+        if URL[j] == 'e':
+            break
+        print("[{}/{}] ファイルの処理を開始します...".format(j+1, len(URL)))
+        print("対象ファイルパス: \{}".format(filenames[j]))
+        text = readSjis(filenames[j])
+        text_s, w, r, sentences = txtConverter(filenames[j], text, lim_size)
+        split_path.append(text_s)
+        w_counts += w
+        r_counts += r
+        s_counts += sentences
 
-        if len(URL) > 1:
-            ave = float(w_counts) / r_counts
-            merge_files(dir_name, split_path, ave, s_counts)
-
-    except Exception as e:
-        print("\n警告: 例外処理を検出したため終了します。")
-        print("エラー内容: {}\n".format(e))
-
-    except KeyboardInterrupt as e:
-        print("\n警告: ユーザによって処理が中断されました。\n")
-
-    else:
-        print("\nプログラムは正常に終了しました。")
-
-    finally:
-        subprocess.call('PAUSE', shell=True)
-        sys.exit()
+    if len(URL) > 1:
+        ave = float(w_counts) / r_counts
+        merge_files(dir_name, split_path, ave, s_counts)
 
 
 if __name__ == "__main__":
     main()
+    print("\nプログラムは正常に終了しました。")
