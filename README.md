@@ -5,7 +5,7 @@
 ![Aozora_Bunko_HP](https://github.com/M-k31t0/MeCabForAozora/assets/88925433/1f3fcb36-1d1d-406e-8046-346bbaf83478)
   
 ### ダウンロード方法
-Releses項目から最新のバージョン(v1.0.2)を参照し，Assetsタブ内のzipファイルをダウンロードしてください．
+[ここ](https://github.com/M-k31t0/MeCabForAozora/releases/)を参照し，Assetsタブ内のzipファイルをダウンロードしてください．
 
 ### 使い方
 MeCabForAozora.exeを起動してください．その後はガイドを設定しているので，それに従って操作してください．
